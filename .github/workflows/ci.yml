@@ -81,14 +81,6 @@ jobs:
           path: rust-checkout
           fetch-depth: 0
 
-      - name: Patch rustc_llvm to skip Polly
-        if: steps.check.outputs.skip != 'true'
-        run: |
-          cd rust-checkout
-          git apply ../patches/skip-polly.patch
-          echo "Patched build.rs to skip Polly linking"
-          grep -A4 'LLVMLineEditor' compiler/rustc_llvm/build.rs
-
       - name: Install wasi-sdk
         if: steps.check.outputs.skip != 'true'
         run: |
@@ -145,7 +137,7 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y llvm-18-dev clang-18 libzstd-dev libxml2-dev zlib1g-dev
+          sudo apt-get install -y llvm-18-dev clang-18 libpolly-18-dev libzstd-dev libxml2-dev zlib1g-dev
 
       - name: Cache rust build
         if: steps.check.outputs.skip != 'true'
@@ -160,6 +152,8 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         working-directory: rust-checkout
         timeout-minutes: 720
+        env:
+          LLVM_LINK_SHARED: "1"
         run: |
           WASI_SDK_PATH="$(pwd)/wasi-sdk" ./x.py install
 
