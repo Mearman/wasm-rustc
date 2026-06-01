@@ -92,6 +92,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y llvm-18 llvm-18-dev libpolly-18-dev libzstd-dev libxml2-dev zlib1g-dev
+          # Ubuntu names Polly libs with -18 suffix; rustc_llvm links -lPolly -lPollyISL
+          sudo ln -sf libPolly-18.so /usr/lib/llvm-18/lib/libPolly.so
+          sudo ln -sf libPollyISL-18.so /usr/lib/llvm-18/lib/libPollyISL.so
+          sudo ln -sf libPolly-18.so /usr/lib/x86_64-linux-gnu/libPolly.so
+          sudo ln -sf libPollyISL-18.so /usr/lib/x86_64-linux-gnu/libPollyISL.so
 
       - name: Configure rust build
         if: steps.check.outputs.skip != 'true'
@@ -115,7 +120,6 @@ jobs:
 
           [llvm]
           download-ci-llvm = false
-          polly = false
 
           [install]
           prefix = "dist"
@@ -141,7 +145,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: rust-checkout/build
-          key: rust-build-${{ steps.head.outputs.sha }}-v2
+          key: rust-build-${{ steps.head.outputs.sha }}
           restore-keys: |
             rust-build-
 
