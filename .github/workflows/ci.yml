@@ -93,7 +93,7 @@ jobs:
       - name: Configure rust build
         if: steps.check.outputs.skip != 'true'
         run: |
-          cat > rust-checkout/config.toml << 'TOML'
+          cat > rust-checkout/bootstrap.toml << 'TOML'
           # Includes one of the default files in src/bootstrap/defaults
           profile = "compiler"
           change-id = 9999999
