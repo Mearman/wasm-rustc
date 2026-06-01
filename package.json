@@ -1,0 +1,6 @@
+{
+  "name": "wasm-rustc-workspace",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*"]
+}
