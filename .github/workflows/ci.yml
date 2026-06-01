@@ -87,10 +87,13 @@ jobs:
           rm wasi-sdk.tar.gz
           echo "WASI_SDK_PATH=$(pwd)/rust-checkout/wasi-sdk" >> "$GITHUB_ENV"
 
+      - name: Install LLVM
+        if: steps.check.outputs.skip != 'true'
+        run: sudo apt-get install -y llvm-18-dev
+
       - name: Configure rust build
         if: steps.check.outputs.skip != 'true'
         run: |
-          cp rust-checkout/config.toml rust-checkout/config.toml.bak
           cat > rust-checkout/config.toml << 'TOML'
           # Includes one of the default files in src/bootstrap/defaults
           profile = "compiler"
@@ -127,6 +130,7 @@ jobs:
 
           [target.'x86_64-unknown-linux-gnu']
           cc = "gcc"
+          llvm-config = "/usr/bin/llvm-config-18"
           TOML
 
       - name: Cache rust build
