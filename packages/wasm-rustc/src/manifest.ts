@@ -18,17 +18,20 @@ export interface ManifestFile {
 /**
  * Fetch and parse the manifest for a given release version.
  *
- * @param baseUrl — base URL where releases are hosted (e.g. GitHub Releases URL)
- * @param version — release version tag (e.g. "rustc-wasm-abc123def456")
+ * The manifest is uploaded as a separate asset alongside rustc-wasm.tar.gz
+ * in each GitHub Release. The URL pattern is:
+ *   ${releaseUrl}/manifest.json
+ *
+ * @param releaseUrl — the base URL for the release assets
+ *   (e.g. "https://github.com/Mearman/wasm-rustc/releases/download/rustc-wasm-abc123")
  */
-export async function fetchManifest(
-  baseUrl: string,
-  version: string,
-): Promise<Manifest> {
-  const url = `${baseUrl}/${version}/manifest.json`;
+export async function fetchManifest(releaseUrl: string): Promise<Manifest> {
+  const url = `${releaseUrl}/manifest.json`;
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to fetch manifest from ${url}: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Failed to fetch manifest from ${url}: ${response.status} ${response.statusText}`,
+    );
   }
   const data: unknown = await response.json();
   return validateManifest(data);

@@ -2,7 +2,7 @@
  * Web Worker that owns the rustc WASM instantiation.
  *
  * Messages in:
- *   { type: "init", version: string, baseUrl: string }
+ *   { type: "init", releaseTag: string, releaseUrl: string, tarballUrl: string }
  *   { type: "compile", source: string, filename?: string, args?: string[], env?: string[] }
  *
  * Messages out:
@@ -19,8 +19,9 @@ import { WASIProcExit } from "@bjorn3/browser_wasi_shim";
 
 interface InitMessage {
   type: "init";
-  version: string;
-  baseUrl: string;
+  releaseTag: string;
+  releaseUrl: string;
+  tarballUrl: string;
 }
 
 interface CompileMessage {
@@ -61,14 +62,16 @@ async function handleInit(msg: InitMessage): Promise<void> {
     return;
   }
 
-  manifest = await fetchManifest(msg.baseUrl, msg.version);
+  manifest = await fetchManifest(msg.releaseUrl);
 
-  cache = new ReleaseCache(msg.version);
+  cache = new ReleaseCache(msg.releaseTag);
   await cache.init();
 
-  await cache.downloadAll(manifest, msg.baseUrl, (loaded, total) => {
-    postMessage({ type: "progress", loaded, total });
-  });
+  if (!(await cache.isCached(manifest))) {
+    await cache.downloadAll(manifest, msg.tarballUrl, (loaded, total) => {
+      postMessage({ type: "progress", loaded, total });
+    });
+  }
 
   const allFiles = await cache.getAll(manifest);
 

@@ -16,8 +16,8 @@ export interface CompilerInitOptions {
    */
   release?: string;
   /**
-   * Base URL for release artefacts. Defaults to this repo's GitHub
-   * Releases URL.
+   * Base URL for the GitHub repository. Defaults to the Mearman/wasm-rustc repo.
+   * The library constructs download URLs from this.
    */
   baseUrl?: string;
   /**
@@ -62,7 +62,8 @@ export interface CompileResult {
   objects: Map<string, Uint8Array>;
 }
 
-const DEFAULT_BASE_URL = "https://github.com/joegrip/wasm-rustc/releases/download";
+const DEFAULT_REPO_API = "https://api.github.com/repos/Mearman/wasm-rustc";
+const DEFAULT_RELEASE_URL = "https://github.com/Mearman/wasm-rustc/releases/download";
 const DEFAULT_TARGET = "x86_64-unknown-linux-gnu";
 
 type WorkerResult = {
@@ -92,15 +93,17 @@ export class Compiler {
    * reports readiness.
    */
   async init(options?: CompilerInitOptions): Promise<void> {
-    const release = options?.release ?? "latest";
-    const baseUrl = options?.baseUrl ?? DEFAULT_BASE_URL;
+    const { releaseTag, releaseUrl, tarballUrl } = await resolveRelease(
+      options?.release,
+      options?.baseUrl,
+    );
 
     this.ready = new Promise<void>((resolve) => {
       this.resolveReady = resolve;
     });
 
     this.worker = new Worker(
-      new URL("./worker.ts", import.meta.url),
+      new URL("./worker.js", import.meta.url),
       { type: "module" },
     );
 
@@ -125,8 +128,9 @@ export class Compiler {
 
     this.worker.postMessage({
       type: "init",
-      version: release,
-      baseUrl,
+      releaseTag,
+      releaseUrl,
+      tarballUrl,
     });
 
     await this.ready;
@@ -187,6 +191,43 @@ export class Compiler {
     this.ready = undefined;
     this.resolveReady = undefined;
   }
+}
+
+/**
+ * Resolve a release tag to the download URLs needed by the worker.
+ *
+ * If `release` is "latest" or undefined, queries the GitHub API for
+ * the most recent release. Otherwise uses the provided tag directly.
+ */
+async function resolveRelease(
+  release?: string,
+  baseUrl?: string,
+): Promise<{ releaseTag: string; releaseUrl: string; tarballUrl: string }> {
+  let releaseTag: string;
+
+  if (release === undefined || release === "latest") {
+    const response = await fetch(`${DEFAULT_REPO_API}/releases`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch releases: ${response.status}`);
+    }
+    const releases: unknown = await response.json();
+    if (!Array.isArray(releases) || releases.length === 0) {
+      throw new Error("No releases found");
+    }
+    const latest = releases[0] as { tag_name?: unknown };
+    if (typeof latest.tag_name !== "string") {
+      throw new Error("Latest release has no tag_name");
+    }
+    releaseTag = latest.tag_name;
+  } else {
+    releaseTag = release;
+  }
+
+  const releaseBase = baseUrl ?? DEFAULT_RELEASE_URL;
+  const releaseUrl = `${releaseBase}/${releaseTag}`;
+  const tarballUrl = `${releaseUrl}/rustc-wasm.tar.gz`;
+
+  return { releaseTag, releaseUrl, tarballUrl };
 }
 
 /**

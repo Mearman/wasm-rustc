@@ -166,6 +166,7 @@ jobs:
         working-directory: rust-checkout/dist
         run: |
           tar czf ../../rustc-wasm.tar.gz .
+          cp manifest.json ../../manifest.json
 
       - name: Create GitHub Release
         if: steps.check.outputs.skip != 'true'
@@ -177,7 +178,7 @@ jobs:
           DATE=$(date -u +%Y-%m-%d)
           if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             echo "Release $TAG already exists, uploading artefact"
-            gh release upload "$TAG" rustc-wasm.tar.gz --clobber \
+            gh release upload "$TAG" rustc-wasm.tar.gz manifest.json --clobber \
               --repo "${{ github.repository }}"
             exit 0
           fi
@@ -198,7 +199,7 @@ jobs:
           \`\`\`
           wasmtime run --dir tmp::/ --dir dist dist/bin/rustc.wasm --sysroot dist --target x86_64-unknown-linux-gnu
           \`\`\`" \
-            rustc-wasm.tar.gz
+            rustc-wasm.tar.gz manifest.json
 
   verify:
     needs: check-and-build
