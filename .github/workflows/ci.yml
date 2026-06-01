@@ -14,13 +14,17 @@ on:
         description: "Force rebuild even if HEAD is unchanged"
         type: boolean
         default: false
+      rust_branch:
+        description: "bjorn3/rust branch to build from"
+        type: string
+        default: compile_rustc_for_wasm15
   # Weekly build on Sunday at 00:00 UTC
   schedule:
     - cron: "0 0 * * 0"
 
 env:
   BJORN3_RUST_REPO: https://github.com/bjorn3/rust.git
-  BJORN3_RUST_BRANCH: compile_rustc_for_wasm15
+  BJORN3_RUST_BRANCH: ${{ inputs.rust_branch || 'compile_rustc_for_wasm15' }}
   WASI_SDK_RELEASE: "20"
   WASI_SDK_VERSION: "20.0"
   WASI_SDK_SHA256: "76csc73221e4e3e7913422365e6e0c4f8a3b2e1e0d0e3c0b3e0a0e0b0e0a0e0a"
