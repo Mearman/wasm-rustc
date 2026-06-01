@@ -45,7 +45,7 @@ pnpm install
 
 ```bash
 # Type-check all packages
-pnnpm -r check
+pnpm -r check
 
 # Build the library
 pnpm --filter wasm-rustc build
@@ -76,7 +76,7 @@ compiler.dispose();
 
 ## Build pipeline
 
-The `.github/workflows/build.yml` workflow:
+The `.github/workflows/ci.yml` workflow:
 
 1. Checks out `bjorn3/rust` at the `compile_rustc_for_wasm15` branch.
 2. Installs wasi-sdk-20.
