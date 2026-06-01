@@ -108,6 +108,9 @@ jobs:
           host = ["wasm32-wasip1-threads"]
           target = ["x86_64-unknown-linux-gnu"]
 
+          [llvm]
+          download-ci-llvm = false
+
           [install]
           prefix = "dist"
           sysconfdir = "etc"
