@@ -75,7 +75,7 @@ jobs:
           repository: bjorn3/rust
           ref: ${{ env.BJORN3_RUST_BRANCH }}
           path: rust-checkout
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Install wasi-sdk
         if: steps.check.outputs.skip != 'true'
