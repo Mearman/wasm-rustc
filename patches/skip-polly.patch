@@ -1,6 +1,7 @@
+diff --git a/compiler/rustc_llvm/build.rs b/compiler/rustc_llvm/build.rs
 --- a/compiler/rustc_llvm/build.rs
 +++ b/compiler/rustc_llvm/build.rs
-@@ -283,6 +283,10 @@
+@@ -283,6 +283,9 @@ fn detect_llvm_link() -> (&'static str, &'static str) {
          if name == "LLVMLineEditor" {
              continue;
          }
