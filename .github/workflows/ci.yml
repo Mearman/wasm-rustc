@@ -196,7 +196,8 @@ jobs:
     steps:
       - name: Install wasmtime
         run: |
-          TAG=$(gh release view latest --repo bytecodealliance/wasmtime --json tagName --jq .tagName)
+          TAG=$(gh release list --repo bytecodealliance/wasmtime --limit 5 --json tagName,isLatest --jq '[.[] | select(.isLatest)][0].tagName // .[0].tagName')
+          echo "Using wasmtime $TAG"
           gh release download "$TAG" \
             --repo bytecodealliance/wasmtime \
             --pattern "wasmtime-${TAG}-x86_64-linux.tar.xz"
