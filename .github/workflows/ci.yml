@@ -87,17 +87,6 @@ jobs:
           rm wasi-sdk.tar.gz
           echo "WASI_SDK_PATH=$(pwd)/rust-checkout/wasi-sdk" >> "$GITHUB_ENV"
 
-      - name: Install LLVM
-        if: steps.check.outputs.skip != 'true'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y llvm-18 llvm-18-dev libpolly-18-dev libzstd-dev libxml2-dev zlib1g-dev
-          # Ubuntu names Polly libs with -18 suffix; rustc_llvm links -lPolly -lPollyISL
-          sudo ln -sf libPolly-18.so /usr/lib/llvm-18/lib/libPolly.so
-          sudo ln -sf libPollyISL-18.so /usr/lib/llvm-18/lib/libPollyISL.so
-          sudo ln -sf libPolly-18.so /usr/lib/x86_64-linux-gnu/libPolly.so
-          sudo ln -sf libPollyISL-18.so /usr/lib/x86_64-linux-gnu/libPollyISL.so
-
       - name: Configure rust build
         if: steps.check.outputs.skip != 'true'
         run: |
@@ -137,7 +126,6 @@ jobs:
 
           [target.'x86_64-unknown-linux-gnu']
           cc = "gcc"
-          llvm-config = "/usr/bin/llvm-config-18"
           TOML
 
       - name: Cache rust build
