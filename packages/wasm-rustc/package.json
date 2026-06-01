@@ -1,0 +1,31 @@
+{
+  "name": "wasm-rustc",
+  "version": "0.1.0",
+  "description": "Browser-side Rust compiler built from rustc compiled to WASM",
+  "type": "module",
+  "main": "dist/compiler.js",
+  "types": "dist/compiler.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/compiler.d.ts",
+      "import": "./dist/compiler.js"
+    },
+    "./worker": {
+      "types": "./dist/worker.d.ts",
+      "import": "./dist/worker.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@bjorn3/browser_wasi_shim": "^0.4.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "license": "MIT OR Apache-2.0"
+}
