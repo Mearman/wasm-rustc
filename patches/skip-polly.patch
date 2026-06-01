@@ -1,0 +1,12 @@
+--- a/compiler/rustc_llvm/build.rs
++++ b/compiler/rustc_llvm/build.rs
+@@ -283,6 +283,10 @@
+         if name == "LLVMLineEditor" {
+             continue;
+         }
++        if name == "Polly" || name == "PollyISL" {
++            continue;
++        }
+ 
+         let kind = if name.starts_with("LLVM") { llvm_kind } else { "dylib" };
+         println!("cargo:rustc-link-lib={kind}={name}");
