@@ -1,6 +1,9 @@
 name: Build rustc WASM
 
 on:
+  push:
+    branches:
+      - main
   # Manual trigger with optional force-rebuild flag
   workflow_dispatch:
     inputs:
