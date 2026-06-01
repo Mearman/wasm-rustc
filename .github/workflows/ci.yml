@@ -27,6 +27,8 @@ env:
   BJORN3_RUST_BRANCH: ${{ inputs.rust_branch || 'compile_rustc_for_wasm20' }}
   WASI_SDK_RELEASE: "25"
   WASI_SDK_VERSION: "25.0"
+  # wild linker commit pinned by compile_rustc_for_wasm20's Cargo.lock
+  WILD_COMMIT: "9a7ad7cb05bce0487a7089bffe95452b43d07cfb"
 
 jobs:
   check-and-build:
@@ -79,6 +81,16 @@ jobs:
           ref: ${{ env.BJORN3_RUST_BRANCH }}
           path: rust-checkout
           fetch-depth: 0
+
+      - name: Fetch wild linker
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          # wasm20 patches rustc to link against the wild linker via a
+          # [patch.crates-io] path dep on wild/libwild, but the wild source
+          # isn't vendored or a submodule. Clone it at the commit Cargo.lock
+          # pins (git+https://github.com/wild-linker/wild.git#9a7ad7cb...).
+          git clone https://github.com/wild-linker/wild.git rust-checkout/wild
+          git -C rust-checkout/wild checkout "$WILD_COMMIT"
 
       - name: Install wasi-sdk
         if: steps.check.outputs.skip != 'true'
