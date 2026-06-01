@@ -138,6 +138,7 @@ jobs:
 
           [target.'x86_64-unknown-linux-gnu']
           cc = "gcc"
+          llvm-config = "/usr/bin/llvm-config-18"
           TOML
 
       - name: Install system LLVM
@@ -145,10 +146,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y llvm-18-dev clang-18 libzstd-dev libxml2-dev zlib1g-dev
-          # Point the build at system llvm-config
-          sed -i '/\[target\.\'x86_64-unknown-linux-gnu\'\]/a llvm-config = "/usr/bin/llvm-config-18"' rust-checkout/config.toml
-          echo "Configured system LLVM 18"
-          grep 'llvm-config' rust-checkout/config.toml
 
       - name: Cache rust build
         if: steps.check.outputs.skip != 'true'
