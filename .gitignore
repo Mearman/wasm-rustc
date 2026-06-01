@@ -1,0 +1,3 @@
+# Override global gitignore — these are project-level symlinks to README.md
+!AGENTS.md
+!CLAUDE.md
