@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "paths": {
+      "wasm-rustc": ["../wasm-rustc/src/compiler.ts"],
+      "wasm-rustc/worker": ["../wasm-rustc/src/worker.ts"]
+    }
+  },
+  "include": ["src"]
+}
