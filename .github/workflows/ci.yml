@@ -141,7 +141,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: rust-checkout/build
-          key: rust-build-${{ steps.head.outputs.sha }}
+          key: rust-build-${{ steps.head.outputs.sha }}-v2
           restore-keys: |
             rust-build-
 
