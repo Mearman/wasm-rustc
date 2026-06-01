@@ -163,6 +163,12 @@ jobs:
           TAG="${{ steps.version.outputs.tag }}"
           SHA="${{ steps.head.outputs.sha }}"
           DATE=$(date -u +%Y-%m-%d)
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release $TAG already exists, uploading artefact"
+            gh release upload "$TAG" rustc-wasm.tar.gz --clobber \
+              --repo "${{ github.repository }}"
+            exit 0
+          fi
           gh release create "$TAG" \
             --repo "${{ github.repository }}" \
             --title "rustc WASM build $DATE" \
