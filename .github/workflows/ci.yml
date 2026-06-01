@@ -1,5 +1,8 @@
 name: Build rustc WASM
 
+permissions:
+  contents: write
+
 on:
   push:
     branches:
@@ -18,6 +21,7 @@ on:
 env:
   BJORN3_RUST_REPO: https://github.com/bjorn3/rust.git
   BJORN3_RUST_BRANCH: compile_rustc_for_wasm15
+  WASI_SDK_RELEASE: "20"
   WASI_SDK_VERSION: "20.0"
   WASI_SDK_SHA256: "76csc73221e4e3e7913422365e6e0c4f8a3b2e1e0d0e3c0b3e0a0e0b0e0a0e0a"
 
@@ -76,7 +80,7 @@ jobs:
       - name: Install wasi-sdk
         if: steps.check.outputs.skip != 'true'
         run: |
-          curl -sL "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VERSION}/wasi-sdk-${WASI_SDK_VERSION}-linux.tar.gz" \
+          curl -sL "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_RELEASE}/wasi-sdk-${WASI_SDK_VERSION}-linux.tar.gz" \
             -o wasi-sdk.tar.gz
           tar xzf wasi-sdk.tar.gz
           mv wasi-sdk-${WASI_SDK_VERSION} rust-checkout/wasi-sdk
@@ -182,8 +186,12 @@ jobs:
     steps:
       - name: Install wasmtime
         run: |
-          curl -sL https://github.com/bytecodealliance/wasmtime/releases/latest/download/wasmtime-v*-x86_64-linux.tar.xz | tar xJ
-          echo "$(pwd)/wasmtime-v*-x86_64-linux" >> "$GITHUB_PATH"
+          TAG=$(gh release view latest --repo bytecodealliance/wasmtime --json tagName --jq .tagName)
+          gh release download "$TAG" \
+            --repo bytecodealliance/wasmtime \
+            --pattern "wasmtime-${TAG}-x86_64-linux.tar.xz"
+          tar xJf "wasmtime-${TAG}-x86_64-linux.tar.xz"
+          echo "$(pwd)/wasmtime-${TAG}-x86_64-linux" >> "$GITHUB_PATH"
 
       - name: Download release
         env:
