@@ -89,7 +89,9 @@ jobs:
 
       - name: Install LLVM
         if: steps.check.outputs.skip != 'true'
-        run: sudo apt-get install -y llvm-18-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-18 llvm-18-dev libpolly-18-dev libzstd-dev libxml2-dev zlib1g-dev
 
       - name: Configure rust build
         if: steps.check.outputs.skip != 'true'
