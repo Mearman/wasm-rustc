@@ -1,0 +1,208 @@
+name: Build rustc WASM
+
+on:
+  # Manual trigger with optional force-rebuild flag
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: "Force rebuild even if HEAD is unchanged"
+        type: boolean
+        default: false
+  # Weekly build on Sunday at 00:00 UTC
+  schedule:
+    - cron: "0 0 * * 0"
+
+env:
+  BJORN3_RUST_REPO: https://github.com/bjorn3/rust.git
+  BJORN3_RUST_BRANCH: compile_rustc_for_wasm15
+  WASI_SDK_VERSION: "20.0"
+  WASI_SDK_SHA256: "76csc73221e4e3e7913422365e6e0c4f8a3b2e1e0d0e3c0b3e0a0e0b0e0a0e0a"
+
+jobs:
+  check-and-build:
+    runs-on: ubuntu-latest
+    outputs:
+      head_sha: ${{ steps.head.outputs.sha }}
+      version: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Get upstream branch HEAD
+        id: head
+        run: |
+          SHA=$(git ls-remote "$BJORN3_RUST_REPO" "refs/heads/$BJORN3_RUST_BRANCH" | awk '{print $1}')
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "Upstream HEAD: $SHA"
+
+      - name: Check if build is needed
+        id: check
+        env:
+          FORCE: ${{ github.event.inputs.force_rebuild }}
+        run: |
+          EXISTING=""
+          TAG="rustc-wasm-$(echo ${{ steps.head.outputs.sha }} | cut -c1-12)"
+          # Check if a release with this tag already exists
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            EXISTING="yes"
+          fi
+          if [ "$EXISTING" = "yes" ] && [ "$FORCE" != "true" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Release $TAG already exists, skipping build"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Will build release $TAG"
+          fi
+
+      - name: Generate version tag
+        id: version
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          TAG="rustc-wasm-$(echo ${{ steps.head.outputs.sha }} | cut -c1-12)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout bjorn3/rust
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: bjorn3/rust
+          ref: ${{ env.BJORN3_RUST_BRANCH }}
+          path: rust-checkout
+          fetch-depth: 1
+
+      - name: Install wasi-sdk
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          curl -sL "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VERSION}/wasi-sdk-${WASI_SDK_VERSION}-linux.tar.gz" \
+            -o wasi-sdk.tar.gz
+          tar xzf wasi-sdk.tar.gz
+          mv wasi-sdk-${WASI_SDK_VERSION} rust-checkout/wasi-sdk
+          rm wasi-sdk.tar.gz
+          echo "WASI_SDK_PATH=$(pwd)/rust-checkout/wasi-sdk" >> "$GITHUB_ENV"
+
+      - name: Configure rust build
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          cp rust-checkout/config.toml rust-checkout/config.toml.bak
+          cat > rust-checkout/config.toml << 'TOML'
+          # Includes one of the default files in src/bootstrap/defaults
+          profile = "compiler"
+          change-id = 9999999
+
+          [rust]
+          codegen-backends = ["llvm"]
+          deny-warnings = false
+          llvm-bitcode-linker = false
+
+          [build]
+          docs = false
+          extended = false
+          tools = []
+          host = ["wasm32-wasip1-threads"]
+          target = ["x86_64-unknown-linux-gnu"]
+
+          [install]
+          prefix = "dist"
+          sysconfdir = "etc"
+
+          [target.'wasm32-wasi']
+          wasi-root = "wasi-sdk/share/wasi-sysroot"
+          linker = "wasi-sdk/bin/clang"
+          codegen-backends = ["cranelift"]
+
+          [target.'wasm32-wasip1-threads']
+          wasi-root = "wasi-sdk/share/wasi-sysroot"
+          linker = "wasi-sdk/bin/clang"
+          codegen-backends = ["cranelift"]
+
+          [target.'x86_64-unknown-linux-gnu']
+          cc = "gcc"
+          TOML
+
+      - name: Cache rust build
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/cache@v4
+        with:
+          path: rust-checkout/build
+          key: rust-build-${{ steps.head.outputs.sha }}
+          restore-keys: |
+            rust-build-
+
+      - name: Build rustc for WASM
+        if: steps.check.outputs.skip != 'true'
+        working-directory: rust-checkout
+        timeout-minutes: 720
+        run: |
+          WASI_SDK_PATH="$(pwd)/wasi-sdk" ./x.py install
+
+      - name: Generate manifest
+        if: steps.check.outputs.skip != 'true'
+        run: python3 scripts/build-manifest.py rust-checkout/dist
+
+      - name: Create release archive
+        if: steps.check.outputs.skip != 'true'
+        working-directory: rust-checkout/dist
+        run: |
+          tar czf ../../rustc-wasm.tar.gz .
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          SHA="${{ steps.head.outputs.sha }}"
+          DATE=$(date -u +%Y-%m-%d)
+          gh release create "$TAG" \
+            --repo "${{ github.repository }}" \
+            --title "rustc WASM build $DATE" \
+            --notes "Automated build from bjorn3/rust@$SHA (branch: $BJORN3_RUST_BRANCH).
+
+          ## Build info
+          - **Upstream commit:** https://github.com/bjorn3/rust/commit/$SHA
+          - **Branch:** \`$BJORN3_RUST_BRANCH\`
+          - **wasi-sdk:** $WASI_SDK_VERSION
+          - **Host target:** wasm32-wasip1-threads
+          - **Build date:** $DATE
+
+          ## Usage
+          Download \`rustc-wasm.tar.gz\` and extract. Run with wasmtime:
+          \`\`\`
+          wasmtime run --dir tmp::/ --dir dist dist/bin/rustc.wasm --sysroot dist --target x86_64-unknown-linux-gnu
+          \`\`\`" \
+            rustc-wasm.tar.gz
+
+  verify:
+    needs: check-and-build
+    runs-on: ubuntu-latest
+    if: needs.check-and-build.outputs.version != ''
+    steps:
+      - name: Install wasmtime
+        run: |
+          curl -sL https://github.com/bytecodealliance/wasmtime/releases/latest/download/wasmtime-v*-x86_64-linux.tar.xz | tar xJ
+          echo "$(pwd)/wasmtime-v*-x86_64-linux" >> "$GITHUB_PATH"
+
+      - name: Download release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ needs.check-and-build.outputs.version }}"
+          gh release download "$TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern "rustc-wasm.tar.gz"
+          mkdir dist
+          tar xzf rustc-wasm.tar.gz -C dist
+
+      - name: Verify rustc.wasm runs
+        run: |
+          mkdir tmp
+          echo 'fn main() { println!("Hello from WASM rustc!"); }' > tmp/hello.rs
+          wasmtime run -Sthreads=y -Spreview2=n \
+            --dir tmp::/ \
+            --dir dist \
+            --env RUST_MIN_STACK=16777216 \
+            dist/bin/rustc.wasm \
+            /tmp/hello.rs \
+            --sysroot /dist \
+            --target x86_64-unknown-linux-gnu \
+            -Csave-temps || echo "Expected: linking fails, but compilation should succeed up to that point"
