@@ -136,7 +136,7 @@ jobs:
 
           [target.'wasm32-wasip1-threads']
           wasi-root = "wasi-sdk/share/wasi-sysroot"
-          linker = "wasi-sdk/bin/clang"
+          linker = "wasi-sdk/bin/wasm32-wasip1-threads-clang"
           codegen-backends = ["cranelift"]
 
           [target.'x86_64-unknown-linux-gnu']
