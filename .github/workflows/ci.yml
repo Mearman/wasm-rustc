@@ -234,16 +234,27 @@ jobs:
           mkdir dist
           tar xzf rustc-wasm.tar.gz -C dist
 
-      - name: Verify rustc.wasm runs
+      - name: Verify rustc.wasm compiles
         run: |
+          # Feed source on stdin (`-`). tmp is mounted as the guest root via
+          # `--dir tmp::/`, so `-o /hello.o` lands at host tmp/hello.o. Emit an
+          # object file: that exercises the full compiler without the linker,
+          # which is the right scope here since in-process wild linking is still
+          # WIP on this branch. The object's presence is asserted, and no `||`
+          # masks a failure, so a broken rustc.wasm fails the job loudly.
           mkdir tmp
-          echo 'fn main() { println!("Hello from WASM rustc!"); }' > tmp/hello.rs
-          wasmtime run -Sthreads=y -Spreview2=n \
-            --dir tmp::/ \
-            --dir dist \
-            --env RUST_MIN_STACK=16777216 \
-            dist/bin/rustc.wasm \
-            /tmp/hello.rs \
-            --sysroot /dist \
-            --target x86_64-unknown-linux-gnu \
-            -Csave-temps || echo "Expected: linking fails, but compilation should succeed up to that point"
+          echo 'fn main() { println!("Hello from wasm32-wasip1 rustc!"); }' \
+            | wasmtime run -Spreview2=n \
+              --dir tmp::/ \
+              --dir dist \
+              --env RUST_MIN_STACK=16777216 \
+              dist/bin/rustc.wasm \
+              - \
+              --sysroot dist \
+              --target x86_64-unknown-linux-gnu \
+              --emit=obj \
+              -o /hello.o
+          test -s tmp/hello.o
+          echo "rustc.wasm compiled Rust to an object file:"
+          ls -la tmp/hello.o
+          file tmp/hello.o
