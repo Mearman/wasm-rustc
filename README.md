@@ -1,5 +1,7 @@
 # wasm-rustc
 
+[![GitHub](https://img.shields.io/badge/GitHub-181717?logo=github&logoColor=white)](https://github.com/Mearman/wasm-rustc) [![Release](https://img.shields.io/github/v/release/Mearman/wasm-rustc)](https://github.com/Mearman/wasm-rustc/releases/latest) [![CI](https://img.shields.io/github/actions/workflow/status/Mearman/wasm-rustc/ci.yml?branch=main)](https://github.com/Mearman/wasm-rustc/actions)
+
 A browser-side Rust compiler built from a recent rustc compiled to WASM.
 
 ## Why
